@@ -5,6 +5,8 @@ import { dailyTarget } from '../../lib/protein';
 import { downloadJson, exportAll, importAll, parseBackup, summarize, type BackupFile } from '../../lib/backup';
 import { today } from '../../lib/dates';
 import { Sheet, Stepper } from '../../components/ui';
+import { db } from '../../db/db';
+import { hasMyHistory, loadMyHistory } from '../../db/migrations';
 
 export default function SettingsScreen() {
   const s = useSettings();
@@ -24,6 +26,17 @@ export default function SettingsScreen() {
       setMessage((err as Error).message);
     }
     if (fileInput.current) fileInput.current.value = '';
+  }
+
+  // Safety net: if the phone ever clears the app's storage, this puts the gym notes back.
+  async function restoreHistory() {
+    const tables = [db.muscleGroups, db.exercises, db.sessions, db.sets];
+    const done = await db.transaction('rw', tables, async () => {
+      if (await hasMyHistory(db)) return false;
+      await loadMyHistory(db);
+      return true;
+    });
+    setMessage(done ? 'Gym history restored ✓' : 'Your gym history is already in the app ✓');
   }
 
   async function confirmImport() {
@@ -63,6 +76,7 @@ export default function SettingsScreen() {
       <div className="list">
         <button className="btn" onClick={onExport}>⬇ Export all data (JSON)</button>
         <button className="btn" onClick={() => fileInput.current?.click()}>⬆ Import from backup…</button>
+        <button className="btn" onClick={restoreHistory}>↺ Restore my gym notes (13/10 – 7/11)</button>
         <input ref={fileInput} type="file" accept="application/json,.json" hidden onChange={(e) => onFile(e.target.files?.[0])} />
       </div>
       {message && <p style={{ textAlign: 'center' }}>{message}</p>}

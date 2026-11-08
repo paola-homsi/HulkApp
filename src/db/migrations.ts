@@ -1,5 +1,7 @@
 // Database upgrades. Each runs ONCE on a device, when the app opens with a newer schema version.
-import type { Transaction } from 'dexie';
+import type { Table, Transaction } from 'dexie';
+import myHistory from './my-history.json';
+import type { Exercise, MuscleGroup, WorkoutSession, WorkoutSet } from '../types';
 
 /**
  * Version 2: give imported exercises back their original names (as written in the gym notes).
@@ -32,4 +34,46 @@ export async function v2RestoreOriginalNames(tx: Transaction) {
     const original = ORIGINAL_NAMES[ex.name];
     if (original && withHistory.has(ex.id)) ex.name = original;
   });
+}
+
+// ---------------------------------------------------------------------------
+// Version 3: your gym notes (13/10 → 7/11) are bundled with the app and loaded automatically,
+// so there's nothing to import. Also: "Biceps curl" entries were the machine → merged.
+// ---------------------------------------------------------------------------
+
+const HISTORY = myHistory as {
+  muscleGroups: MuscleGroup[];
+  exercises: Exercise[];
+  sessions: WorkoutSession[];
+  sets: WorkoutSet[];
+};
+
+/** Anything with .table(name): the database itself, or a transaction during an upgrade. */
+type Tables = { table: (name: string) => Table<any, string> };
+
+export async function hasMyHistory(t: Tables): Promise<boolean> {
+  return (await t.table('sessions').filter((s: WorkoutSession) => s.id.startsWith('imp-')).count()) > 0;
+}
+
+/** Load the bundled history: your groups, your exercise names, all sessions and sets. */
+export async function loadMyHistory(t: Tables) {
+  const mine = new Set(HISTORY.exercises.map((e) => e.id));
+  const used = new Set((await t.table('sets').toArray()).map((s: WorkoutSet) => s.exerciseId));
+  // Remove starter exercises you never used, so the library is exactly your list.
+  const current: Exercise[] = await t.table('exercises').toArray();
+  await t.table('exercises').bulkDelete(current.filter((e) => !mine.has(e.id) && !used.has(e.id)).map((e) => e.id));
+  await t.table('muscleGroups').bulkPut(HISTORY.muscleGroups);
+  await t.table('exercises').bulkPut(HISTORY.exercises);
+  await t.table('sessions').bulkPut(HISTORY.sessions);
+  await t.table('sets').bulkPut(HISTORY.sets);
+}
+
+export async function v3LoadMyHistory(tx: Transaction) {
+  if (await hasMyHistory(tx)) {
+    // History was already imported: only apply the biceps fix (keeps any edits you made).
+    await tx.table('sets').where('exerciseId').equals('ex-arms-biceps-curl').modify({ exerciseId: 'ex-arms-biceps-curl-machine' });
+    await tx.table('exercises').delete('ex-arms-biceps-curl');
+    return;
+  }
+  await loadMyHistory(tx);
 }

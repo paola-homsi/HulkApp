@@ -3,7 +3,7 @@ import type {
   Exercise, Food, FoodEntry, MuscleGroup, Settings, WorkoutSession, WorkoutSet,
 } from '../types';
 import { seedDatabase } from './seed';
-import { v2RestoreOriginalNames } from './migrations';
+import { loadMyHistory, v2RestoreOriginalNames, v3LoadMyHistory } from './migrations';
 
 // Dexie wraps IndexedDB. Each property below is one table ("object store").
 export class TrackerDB extends Dexie {
@@ -44,8 +44,25 @@ export class TrackerDB extends Dexie {
       })
       .upgrade(v2RestoreOriginalNames);
 
-    // Runs once, the first time the database is created on this device.
-    this.on('populate', (tx) => seedDatabase(tx));
+    // Version 3: load the bundled gym history (see migrations.ts).
+    this.version(3)
+      .stores({
+        settings: 'id',
+        foods: 'id, name',
+        foodEntries: 'id, date, foodId',
+        muscleGroups: 'id, order',
+        exercises: 'id, muscleGroupId, order',
+        sessions: 'id, date, muscleGroupId, startedAt',
+        sets: 'id, sessionId, exerciseId',
+      })
+      .upgrade(v3LoadMyHistory);
+
+    // Runs once, the first time the database is created on this device:
+    // starter foods + settings, then your own exercises and history.
+    this.on('populate', async (tx) => {
+      await seedDatabase(tx);
+      await loadMyHistory(tx);
+    });
   }
 }
 
