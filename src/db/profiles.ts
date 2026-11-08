@@ -16,7 +16,7 @@ export interface Profile {
 const PROFILES_KEY = 'fittrack.profiles';
 const CURRENT_KEY = 'fittrack.currentProfile';
 
-/** The database used before users existed. Its data belongs to Hulk. */
+/** Hulk's database (the one used before users existed). */
 export const LEGACY_DB = 'fittrack';
 export const HULK_ID = 'hulk';
 
@@ -78,15 +78,16 @@ export async function deleteProfile(id: string) {
 }
 
 /**
- * First launch after this update: the existing data (database "fittrack") becomes Hulk's,
- * and she is selected, so nothing changes for her.
+ * Hulk is built in: listed on every phone. Choosing Hulk opens the original database ("fittrack"),
+ * which is filled with Hulk's gym notes the first time it's created (see db.ts → populate).
+ * On the phone that already had data, that data simply becomes Hulk's and Hulk is selected.
  */
 export async function initProfiles() {
-  if (localStorage.getItem(PROFILES_KEY)) return;
-  if (await Dexie.exists(LEGACY_DB)) {
-    saveProfiles([{ id: HULK_ID, name: 'Hulk', dbName: LEGACY_DB, createdAt: Date.now() }]);
-    localStorage.setItem(CURRENT_KEY, HULK_ID);
-  } else {
-    saveProfiles([]);
+  const firstRun = localStorage.getItem(PROFILES_KEY) === null;
+  const profiles = listProfiles();
+  if (!profiles.some((p) => p.id === HULK_ID)) {
+    saveProfiles([{ id: HULK_ID, name: 'Hulk', dbName: LEGACY_DB, createdAt: Date.now() }, ...profiles]);
   }
+  // Phone that used the app before users existed: open straight into Hulk, as before.
+  if (firstRun && (await Dexie.exists(LEGACY_DB))) localStorage.setItem(CURRENT_KEY, HULK_ID);
 }
