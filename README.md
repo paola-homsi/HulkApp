@@ -56,7 +56,12 @@ src/
 Each user on the phone has their own IndexedDB database (`fittrack-<id>`), so data never mixes.
 The list of users and the current one are in localStorage (`db/profiles.ts`). Switching user reloads the
 app with the other database (`main.tsx` → `openDatabase`). The original database (`fittrack`) belongs to **Hulk**
-and holds the imported gym notes. There's no password: users separate data, they don't secure it.
+and holds the imported gym notes.
+
+A user can have a PIN (Hulk starts with one). Only a SHA-256 hash is stored, never the PIN.
+"Remember on this phone" stores that hash in localStorage; otherwise the PIN is asked once per app session.
+The PIN keeps people from casually opening someone's data in the app. It is not strong security:
+there's no server, so the data and the gym notes in the public code can still be read by someone technical.
 
 ### Three ideas to know
 

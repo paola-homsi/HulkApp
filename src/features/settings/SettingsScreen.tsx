@@ -5,6 +5,7 @@ import { dailyTarget } from '../../lib/protein';
 import { downloadJson, exportAll, importAll, parseBackup, summarize, type BackupFile } from '../../lib/backup';
 import { today } from '../../lib/dates';
 import { Sheet, Stepper } from '../../components/ui';
+import PinSettings from './PinSettings';
 import { db } from '../../db/db';
 import { hasMyHistory, loadMyHistory } from '../../db/migrations';
 import { HULK_ID, currentProfile, deleteProfile, renameProfile, switchTo } from '../../db/profiles';
@@ -67,6 +68,8 @@ export default function SettingsScreen() {
           <input id="un" className="input" value={userName} onChange={(e) => setUserName(e.target.value)}
             onBlur={() => userName.trim() && renameProfile(profile.id, userName)} />
         </div>
+        <PinSettings />
+        <div className="spacer" />
         <button className="btn danger" onClick={onDeleteUser}>Delete this user and their data</button>
       </div>
 

@@ -4,7 +4,8 @@ import { registerSW } from 'virtual:pwa-register';
 import App from './App';
 import ProfilePicker from './features/profiles/ProfilePicker';
 import { openDatabase } from './db/db';
-import { currentProfile, initProfiles } from './db/profiles';
+import { currentProfile, initProfiles, needsPin, switchTo } from './db/profiles';
+import PinForm from './features/profiles/PinForm';
 import './styles.css';
 
 // Registers the service worker that caches the app for offline use.
@@ -18,11 +19,21 @@ async function start() {
   // Which user? If none is chosen yet, show the "Who's training?" screen.
   await initProfiles();
   const profile = currentProfile();
-  if (profile) openDatabase(profile.dbName);
+  const root = ReactDOM.createRoot(document.getElementById('root')!);
 
-  ReactDOM.createRoot(document.getElementById('root')!).render(
-    <React.StrictMode>{profile ? <App /> : <ProfilePicker />}</React.StrictMode>,
-  );
+  // Locked user (PIN not entered this session and not remembered): ask for the PIN first.
+  if (profile && needsPin(profile)) {
+    root.render(
+      <main className="screen">
+        <h1 style={{ marginTop: 24 }}>Enter PIN</h1>
+        <PinForm profile={profile} onUnlocked={() => location.reload()} onCancel={() => switchTo(null)} cancelLabel="Switch user" />
+      </main>,
+    );
+    return;
+  }
+
+  if (profile) openDatabase(profile.dbName);
+  root.render(<React.StrictMode>{profile ? <App /> : <ProfilePicker />}</React.StrictMode>);
 }
 
 start();

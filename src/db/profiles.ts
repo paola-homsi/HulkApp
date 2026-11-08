@@ -1,7 +1,8 @@
 // Users ("profiles") on this device. Each user has their OWN IndexedDB database,
 // so their data never mixes. The list of users and the current user are kept in localStorage.
 //
-// There is no password: anyone holding the phone can switch user. It separates data, it doesn't secure it.
+// A user can have a PIN. It keeps people from casually opening someone else's data in the app,
+// but it is NOT strong security: everything is stored on the phone, and there is no server.
 import Dexie from 'dexie';
 import { slug } from './seed';
 
@@ -11,7 +12,12 @@ export interface Profile {
   dbName: string; // IndexedDB database holding this user's data
   createdAt: number;
   photo?: string; // small JPEG as a data: URL, chosen from the phone (stays on this device)
+  pinHash?: string; // SHA-256 of the PIN (the PIN itself is never stored)
 }
+
+export const DEFAULT_HULK_PIN = '123456789';
+const UNLOCKED_KEY = 'fittrack.unlocked.'; // sessionStorage: unlocked until the app is closed
+const REMEMBER_KEY = 'fittrack.rememberPin.'; // localStorage: "remember on this phone"
 
 const PROFILES_KEY = 'fittrack.profiles';
 const CURRENT_KEY = 'fittrack.currentProfile';
@@ -64,6 +70,54 @@ export function renameProfile(id: string, name: string) {
   saveProfiles(listProfiles().map((p) => (p.id === id ? { ...p, name: name.trim() } : p)));
 }
 
+// ----- PIN -----
+
+export async function hashPin(profileId: string, pin: string): Promise<string> {
+  const bytes = new TextEncoder().encode(`hulkapp:${profileId}:${pin}`);
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+export const isValidPin = (pin: string) => /^\d{4,12}$/.test(pin);
+
+export function isRemembered(p: Profile): boolean {
+  return !!p.pinHash && localStorage.getItem(REMEMBER_KEY + p.id) === p.pinHash;
+}
+
+/** True when the user has a PIN that hasn't been entered yet (this session, or remembered). */
+export function needsPin(p: Profile): boolean {
+  if (!p.pinHash) return false;
+  return sessionStorage.getItem(UNLOCKED_KEY + p.id) !== p.pinHash && !isRemembered(p);
+}
+
+/** Check the PIN. If correct, unlock for this session (and remember it on this phone if asked). */
+export async function unlock(p: Profile, pin: string, remember: boolean): Promise<boolean> {
+  const hash = await hashPin(p.id, pin);
+  if (hash !== p.pinHash) return false;
+  sessionStorage.setItem(UNLOCKED_KEY + p.id, hash);
+  if (remember) localStorage.setItem(REMEMBER_KEY + p.id, hash);
+  return true;
+}
+
+export function rememberOnThisPhone(p: Profile) {
+  if (p.pinHash) localStorage.setItem(REMEMBER_KEY + p.id, p.pinHash);
+}
+
+export function forgetOnThisPhone(p: Profile) {
+  localStorage.removeItem(REMEMBER_KEY + p.id);
+}
+
+/** Set a new PIN. Stays unlocked (and remembered, if it was) on this phone. */
+export async function setPin(id: string, pin: string) {
+  const p = listProfiles().find((x) => x.id === id);
+  if (!p) return;
+  const wasRemembered = isRemembered(p);
+  const hash = await hashPin(id, pin);
+  saveProfiles(listProfiles().map((x) => (x.id === id ? { ...x, pinHash: hash } : x)));
+  sessionStorage.setItem(UNLOCKED_KEY + id, hash);
+  if (wasRemembered) localStorage.setItem(REMEMBER_KEY + id, hash);
+}
+
 export function setProfilePhoto(id: string, photo: string | undefined) {
   saveProfiles(listProfiles().map((p) => (p.id === id ? { ...p, photo } : p)));
 }
@@ -84,10 +138,14 @@ export async function deleteProfile(id: string) {
  */
 export async function initProfiles() {
   const firstRun = localStorage.getItem(PROFILES_KEY) === null;
-  const profiles = listProfiles();
+  let profiles = listProfiles();
   if (!profiles.some((p) => p.id === HULK_ID)) {
-    saveProfiles([{ id: HULK_ID, name: 'Hulk', dbName: LEGACY_DB, createdAt: Date.now() }, ...profiles]);
+    profiles = [{ id: HULK_ID, name: 'Hulk', dbName: LEGACY_DB, createdAt: Date.now() }, ...profiles];
   }
+  // Hulk starts with the PIN 123456789 (change it in Settings → User).
+  const hulk = profiles.find((p) => p.id === HULK_ID)!;
+  if (!hulk.pinHash) hulk.pinHash = await hashPin(HULK_ID, DEFAULT_HULK_PIN);
+  saveProfiles(profiles);
   // Phone that used the app before users existed: open straight into Hulk, as before.
   if (firstRun && (await Dexie.exists(LEGACY_DB))) localStorage.setItem(CURRENT_KEY, HULK_ID);
 }

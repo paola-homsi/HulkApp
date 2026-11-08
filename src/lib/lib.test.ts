@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { uniqueId } from '../db/profiles';
+import { hashPin, isValidPin, uniqueId } from '../db/profiles';
 import { dailyTarget, gapSuggestions, proteinFor } from './protein';
 import { chartPoints, e1rm, exerciseProgress, formatSets, personalBest, prefillSet } from './strength';
 import { addDays, daysBetween, startOfWeek } from './dates';
@@ -98,5 +98,21 @@ describe('user ids', () => {
     expect(uniqueId('Hulk', [])).toBe('hulk');
     expect(uniqueId('Hulk', ['hulk'])).toBe('hulk-2');
     expect(uniqueId('Zoé Martin', [])).toBe('zoe-martin');
+  });
+});
+
+describe('PIN', () => {
+  it('accepts 4 to 12 digits only', () => {
+    expect(isValidPin('1234')).toBe(true);
+    expect(isValidPin('123456789')).toBe(true);
+    expect(isValidPin('123')).toBe(false);
+    expect(isValidPin('12a4')).toBe(false);
+  });
+  it('hash depends on user and PIN, never stores the PIN', async () => {
+    const a = await hashPin('hulk', '123456789');
+    expect(a).toHaveLength(64);
+    expect(a).not.toContain('123456789');
+    expect(await hashPin('hulk', '123456789')).toBe(a);
+    expect(await hashPin('other', '123456789')).not.toBe(a);
   });
 });

@@ -2,7 +2,8 @@
 import { useState } from 'react';
 import { TrackerDB } from '../../db/db';
 import { DEFAULT_SETTINGS } from '../../db/seed';
-import { addProfile, listProfiles, switchTo } from '../../db/profiles';
+import { addProfile, listProfiles, needsPin, switchTo, type Profile } from '../../db/profiles';
+import PinForm from './PinForm';
 import Avatar from '../../components/Avatar';
 
 export default function ProfilePicker() {
@@ -10,6 +11,19 @@ export default function ProfilePicker() {
   const [adding, setAdding] = useState(profiles.length === 0);
   const [name, setName] = useState('');
   const [weight, setWeight] = useState('');
+  const [asking, setAsking] = useState<Profile | null>(null); // user whose PIN we're asking for
+
+  // Users with a PIN must enter it first (unless remembered on this phone).
+  const choose = (p: Profile) => (needsPin(p) ? setAsking(p) : switchTo(p.id));
+
+  if (asking) {
+    return (
+      <main className="screen" style={{ paddingBottom: 32 }}>
+        <h1 style={{ marginTop: 24 }}>Enter PIN</h1>
+        <PinForm profile={asking} onUnlocked={() => switchTo(asking.id)} onCancel={() => setAsking(null)} />
+      </main>
+    );
+  }
 
   async function create(e: React.FormEvent) {
     e.preventDefault();
@@ -31,9 +45,10 @@ export default function ProfilePicker() {
 
       <div className="list">
         {profiles.map((p) => (
-          <button key={p.id} className="row" onClick={() => switchTo(p.id)} style={{ minHeight: 68 }}>
+          <button key={p.id} className="row" onClick={() => choose(p)} style={{ minHeight: 68 }}>
             <Avatar profile={p} size={48} />
             <div className="row-main"><div className="row-title" style={{ fontSize: '1.15rem' }}>{p.name}</div></div>
+            {p.pinHash && <span className="muted" aria-label="Protected by PIN">🔒</span>}
             <span className="muted">›</span>
           </button>
         ))}
