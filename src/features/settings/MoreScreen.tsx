@@ -1,5 +1,6 @@
 // "More" tab: the screens you use less often.
 import { Link } from 'react-router-dom';
+import { currentProfile, switchTo } from '../../db/profiles';
 
 const ITEMS = [
   { to: '/library', title: 'Exercise library', sub: 'Muscle groups and exercises: add, rename, reorder' },
@@ -11,6 +12,14 @@ export default function MoreScreen() {
   return (
     <>
       <h1>More</h1>
+      <div className="row" style={{ cursor: 'default', marginBottom: 16 }}>
+        <span className="avatar">{currentProfile()?.name.charAt(0).toUpperCase()}</span>
+        <div className="row-main">
+          <div className="row-title">{currentProfile()?.name}</div>
+          <div className="row-sub">Current user</div>
+        </div>
+        <button className="btn small" onClick={() => switchTo(null)}>Switch user</button>
+      </div>
       <div className="list">
         {ITEMS.map((i) => (
           <Link key={i.to} to={i.to} className="row" style={{ color: 'inherit', textDecoration: 'none' }}>

@@ -24,6 +24,7 @@ src/
   db/
     db.ts            Database schema (Dexie). Tables + indexed fields.
     seed.ts          Built-in foods, muscle groups and exercises (loaded on first launch).
+    profiles.ts      Users on this device: list, add, rename, delete, switch.
     queries.ts       Reusable data hooks: useSettings, useExercises, useExerciseHistory…
     migrations.ts    One-time data upgrades (Dexie .upgrade), e.g. v2 restores original exercise names.
   lib/               Logic, no UI. Read these to understand the rules.
@@ -34,6 +35,7 @@ src/
     backup.ts        Export / import JSON.
     workouts.ts      Remove an exercise from a workout, delete a workout.
     lib.test.ts      Unit tests for the above.
+  features/profiles/ "Who's training?" screen (choose or create a user).
   components/        Shared UI: Stepper (− value +), ProgressBar, Sheet (bottom panel), Toast.
   features/          One folder per screen.
     today/           Today screen, Add food sheet, Amount form.
@@ -48,6 +50,13 @@ src/
   main.tsx           Entry point. Registers the service worker (offline).
   styles.css         All styling. Colors are CSS variables at the top (dark + light).
 ```
+
+### Users
+
+Each user on the phone has their own IndexedDB database (`fittrack-<id>`), so data never mixes.
+The list of users and the current one are in localStorage (`db/profiles.ts`). Switching user reloads the
+app with the other database (`main.tsx` → `openDatabase`). The original database (`fittrack`) belongs to **Hulk**
+and holds the imported gym notes. There's no password: users separate data, they don't secure it.
 
 ### Three ideas to know
 

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { uniqueId } from '../db/profiles';
 import { dailyTarget, gapSuggestions, proteinFor } from './protein';
 import { chartPoints, e1rm, exerciseProgress, formatSets, personalBest, prefillSet } from './strength';
 import { addDays, daysBetween, startOfWeek } from './dates';
@@ -89,5 +90,13 @@ describe('exercise progress', () => {
     const p = exerciseProgress([{ session: s('a', '2026-10-27'), sets: [set(1, 0, 10, 'a')] }]);
     expect(p.unit).toBe('reps');
     expect(p.last).toBe(10);
+  });
+});
+
+describe('user ids', () => {
+  it('are readable and unique', () => {
+    expect(uniqueId('Hulk', [])).toBe('hulk');
+    expect(uniqueId('Hulk', ['hulk'])).toBe('hulk-2');
+    expect(uniqueId('Zoé Martin', [])).toBe('zoe-martin');
   });
 });

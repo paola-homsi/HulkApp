@@ -7,15 +7,25 @@ import { today } from '../../lib/dates';
 import { Sheet, Stepper } from '../../components/ui';
 import { db } from '../../db/db';
 import { hasMyHistory, loadMyHistory } from '../../db/migrations';
+import { HULK_ID, currentProfile, deleteProfile, renameProfile, switchTo } from '../../db/profiles';
 
 export default function SettingsScreen() {
   const s = useSettings();
   const fileInput = useRef<HTMLInputElement>(null);
   const [pending, setPending] = useState<BackupFile | null>(null);
   const [message, setMessage] = useState('');
+  const profile = currentProfile()!;
+  const [userName, setUserName] = useState(profile.name);
+
+  async function onDeleteUser() {
+    const typed = prompt(`This deletes ${profile.name} and ALL their data on this phone. Type the name to confirm:`);
+    if (typed?.trim() !== profile.name) return;
+    await deleteProfile(profile.id);
+    switchTo(null);
+  }
 
   async function onExport() {
-    downloadJson(await exportAll(), `fittrack-backup-${today()}.json`);
+    downloadJson(await exportAll(), `hulkapp-${profile.id}-${today()}.json`);
   }
 
   async function onFile(file: File | undefined) {
@@ -50,6 +60,16 @@ export default function SettingsScreen() {
     <>
       <h1>Settings</h1>
 
+      <h3>User</h3>
+      <div className="card">
+        <div className="field">
+          <label htmlFor="un">Name</label>
+          <input id="un" className="input" value={userName} onChange={(e) => setUserName(e.target.value)}
+            onBlur={() => userName.trim() && renameProfile(profile.id, userName)} />
+        </div>
+        <button className="btn danger" onClick={onDeleteUser}>Delete this user and their data</button>
+      </div>
+
       <h3>Protein target</h3>
       <div className="card">
         <Stepper label="Body weight" suffix="kg" value={s.bodyWeightKg} step={0.5} onChange={(v) => updateSettings({ bodyWeightKg: v })} />
@@ -76,12 +96,14 @@ export default function SettingsScreen() {
       <div className="list">
         <button className="btn" onClick={onExport}>⬇ Export all data (JSON)</button>
         <button className="btn" onClick={() => fileInput.current?.click()}>⬆ Import from backup…</button>
-        <button className="btn" onClick={restoreHistory}>↺ Restore my gym notes (13/10 – 7/11)</button>
+        {profile.id === HULK_ID && (
+          <button className="btn" onClick={restoreHistory}>↺ Restore Hulk's gym notes (13/10 – 7/11)</button>
+        )}
         <input ref={fileInput} type="file" accept="application/json,.json" hidden onChange={(e) => onFile(e.target.files?.[0])} />
       </div>
       {message && <p style={{ textAlign: 'center' }}>{message}</p>}
       <p className="muted" style={{ fontSize: '0.85rem' }}>
-        Your data stays on this phone only. Export a backup now and then, and before changing phones.
+        Data of this user only. It stays on this phone. Export a backup now and then, and before changing phones.
       </p>
 
       <Sheet open={!!pending} title="Import backup?" onClose={() => setPending(null)}>

@@ -233,3 +233,9 @@ a { color: var(--accent); }
 .trend-up { color: var(--success); font-weight: 700; }
 .trend-flat { color: var(--muted); font-weight: 700; }
 .trend-down { color: var(--danger); font-weight: 700; }
+
+/* ===== Users ===== */
+.avatar {
+  width: 40px; height: 40px; flex: none; border-radius: 50%; display: grid; place-items: center;
+  background: var(--accent); color: var(--accent-text); font-weight: 800; font-size: 1.1rem;
+}
