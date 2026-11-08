@@ -97,3 +97,27 @@ export function prefillSet(
   // reps = 0 means reps weren't recorded; suggest 10 instead.
   return source ? { weightKg: source.weightKg, reps: source.reps || 10 } : { weightKg: 0, reps: 10 };
 }
+
+export interface ExerciseProgress {
+  points: ChartPoint[]; // one per session, oldest first
+  unit: 'kg' | 'reps';
+  hasData: boolean; // false when every value is 0 (e.g. bar only, no reps written)
+  first?: number;
+  last?: number;
+  change?: number; // last - first
+  changePct?: number; // % change, when first > 0
+}
+
+/** Progress of one exercise from its first to its latest session (top-set weight, or reps for bodyweight). */
+export function exerciseProgress(history: ExerciseSession[]): ExerciseProgress {
+  const all = history.flatMap((h) => h.sets);
+  const bodyweight = all.length > 0 && all.every((s) => s.weightKg === 0);
+  const unit = bodyweight ? 'reps' : 'kg';
+  const points = chartPoints(history, bodyweight ? 'reps' : 'top');
+  const hasData = points.some((p) => p.value > 0);
+  if (points.length === 0) return { points, unit, hasData };
+  const first = points[0].value;
+  const last = points[points.length - 1].value;
+  const change = round1(last - first);
+  return { points, unit, hasData, first, last, change, changePct: first > 0 ? Math.round((change / first) * 100) : undefined };
+}

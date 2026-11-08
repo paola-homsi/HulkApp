@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
-import { HashRouter, NavLink, Navigate, Route, Routes } from 'react-router-dom';
+import { HashRouter, NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { useSettings } from './db/queries';
-import { TodayIcon, WorkoutIcon, LibraryIcon, FoodsIcon, SettingsIcon } from './components/icons';
+import { TodayIcon, WorkoutIcon, HistoryIcon, ProgressIcon, MoreIcon } from './components/icons';
 import TodayScreen from './features/today/TodayScreen';
 import FoodsScreen from './features/foods/FoodsScreen';
 import LibraryScreen from './features/library/LibraryScreen';
@@ -10,14 +10,35 @@ import WorkoutScreen from './features/workout/WorkoutScreen';
 import NotDoneView from './features/workout/NotDoneView';
 import ExerciseDetail from './features/exercise/ExerciseDetail';
 import SettingsScreen from './features/settings/SettingsScreen';
+import MoreScreen from './features/settings/MoreScreen';
+import HistoryScreen from './features/history/HistoryScreen';
+import ProgressScreen from './features/progress/ProgressScreen';
 
+// Each tab is highlighted for its own path and for the screens listed in `also`.
 const TABS = [
-  { to: '/today', label: 'Today', Icon: TodayIcon },
-  { to: '/workout', label: 'Workout', Icon: WorkoutIcon },
-  { to: '/library', label: 'Library', Icon: LibraryIcon },
-  { to: '/foods', label: 'Foods', Icon: FoodsIcon },
-  { to: '/settings', label: 'Settings', Icon: SettingsIcon },
+  { to: '/today', label: 'Today', Icon: TodayIcon, also: [] as string[] },
+  { to: '/workout', label: 'Workout', Icon: WorkoutIcon, also: [] },
+  { to: '/history', label: 'History', Icon: HistoryIcon, also: [] },
+  { to: '/progress', label: 'Progress', Icon: ProgressIcon, also: ['/exercise'] },
+  { to: '/more', label: 'More', Icon: MoreIcon, also: ['/library', '/foods', '/settings'] },
 ];
+
+function TabBar() {
+  const { pathname } = useLocation();
+  return (
+    <nav className="tabbar">
+      {TABS.map(({ to, label, Icon, also }) => {
+        const active = [to, ...also].some((p) => pathname.startsWith(p));
+        return (
+          <NavLink key={to} to={to} className={`tab ${active ? 'active' : ''}`}>
+            <Icon />
+            <span>{label}</span>
+          </NavLink>
+        );
+      })}
+    </nav>
+  );
+}
 
 export default function App() {
   const { theme } = useSettings();
@@ -42,17 +63,13 @@ export default function App() {
           <Route path="/exercise/:exerciseId" element={<ExerciseDetail />} />
           <Route path="/foods" element={<FoodsScreen />} />
           <Route path="/settings" element={<SettingsScreen />} />
+          <Route path="/history" element={<HistoryScreen />} />
+          <Route path="/progress" element={<ProgressScreen />} />
+          <Route path="/more" element={<MoreScreen />} />
           <Route path="*" element={<Navigate to="/today" replace />} />
         </Routes>
       </main>
-      <nav className="tabbar">
-        {TABS.map(({ to, label, Icon }) => (
-          <NavLink key={to} to={to} className={({ isActive }) => `tab ${isActive ? 'active' : ''}`}>
-            <Icon />
-            <span>{label}</span>
-          </NavLink>
-        ))}
-      </nav>
+      <TabBar />
     </HashRouter>
   );
 }

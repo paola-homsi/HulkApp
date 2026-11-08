@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { dailyTarget, gapSuggestions, proteinFor } from './protein';
-import { chartPoints, e1rm, formatSets, personalBest, prefillSet } from './strength';
+import { chartPoints, e1rm, exerciseProgress, formatSets, personalBest, prefillSet } from './strength';
 import { addDays, daysBetween, startOfWeek } from './dates';
 import { checkGroupSize } from './library';
 import type { Food, WorkoutSet } from '../types';
@@ -73,5 +73,21 @@ describe('reps not recorded (imported notes)', () => {
   });
   it('prefills 10 reps when last time had none', () => {
     expect(prefillSet(1, [set(1, 23, 0)], [])).toEqual({ weightKg: 23, reps: 10 });
+  });
+});
+
+describe('exercise progress', () => {
+  const s = (id: string, date: string) => ({ id, muscleGroupId: 'g', date, startedAt: 0 });
+  it('first → latest top set', () => {
+    const p = exerciseProgress([
+      { session: s('a', '2026-10-13'), sets: [set(1, 18, 0, 'a')] },
+      { session: s('b', '2026-10-29'), sets: [set(1, 23, 0, 'b')] },
+    ]);
+    expect(p).toMatchObject({ first: 18, last: 23, change: 5, changePct: 28, unit: 'kg' });
+  });
+  it('bodyweight uses reps', () => {
+    const p = exerciseProgress([{ session: s('a', '2026-10-27'), sets: [set(1, 0, 10, 'a')] }]);
+    expect(p.unit).toBe('reps');
+    expect(p.last).toBe(10);
   });
 });

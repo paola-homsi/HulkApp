@@ -220,3 +220,16 @@ a { color: var(--accent); }
 .row.compact { gap: 2px; }
 .row.compact .icon-btn { min-width: 38px; }
 .row.compact .row-title { white-space: normal; }
+
+/* ===== History ===== */
+.history-line {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px; width: 100%;
+  min-height: 44px; padding: 6px 8px 6px 0; background: none; border: none; border-top: 1px solid var(--border);
+  text-align: left; cursor: pointer; font-weight: 500;
+}
+.history-line .muted { text-align: right; font-size: 0.9rem; white-space: nowrap; }
+
+/* ===== Progress ===== */
+.trend-up { color: var(--success); font-weight: 700; }
+.trend-flat { color: var(--muted); font-weight: 700; }
+.trend-down { color: var(--danger); font-weight: 700; }

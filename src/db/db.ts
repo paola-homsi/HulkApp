@@ -3,6 +3,7 @@ import type {
   Exercise, Food, FoodEntry, MuscleGroup, Settings, WorkoutSession, WorkoutSet,
 } from '../types';
 import { seedDatabase } from './seed';
+import { v2RestoreOriginalNames } from './migrations';
 
 // Dexie wraps IndexedDB. Each property below is one table ("object store").
 export class TrackerDB extends Dexie {
@@ -28,6 +29,20 @@ export class TrackerDB extends Dexie {
       sessions: 'id, date, muscleGroupId, startedAt',
       sets: 'id, sessionId, exerciseId',
     });
+
+    // Version 2: same tables, plus a one-time data fix (see migrations.ts).
+    // Dexie runs .upgrade() only on devices that still have version 1, never on a fresh install.
+    this.version(2)
+      .stores({
+        settings: 'id',
+        foods: 'id, name',
+        foodEntries: 'id, date, foodId',
+        muscleGroups: 'id, order',
+        exercises: 'id, muscleGroupId, order',
+        sessions: 'id, date, muscleGroupId, startedAt',
+        sets: 'id, sessionId, exerciseId',
+      })
+      .upgrade(v2RestoreOriginalNames);
 
     // Runs once, the first time the database is created on this device.
     this.on('populate', (tx) => seedDatabase(tx));

@@ -1,4 +1,4 @@
-// Log sets for one exercise in the current session.
+// Log or edit the sets of one exercise in one workout (today's, or a past one from History).
 import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, newId } from '../../db/db';
@@ -6,12 +6,14 @@ import { useExerciseHistory, useSettings } from '../../db/queries';
 import { formatDay } from '../../lib/dates';
 import { fmtKg, formatBest, formatSets, personalBest, prefillSet } from '../../lib/strength';
 import { Sheet, Stepper } from '../../components/ui';
+import { removeExerciseFromSession } from '../../lib/workouts';
 import { RestTimer } from './RestTimer';
 import type { Exercise, WorkoutSession } from '../../types';
 
 export default function SetSheet(props: {
   exercise: Exercise;
   session: WorkoutSession;
+  showTimer?: boolean; // false when editing a past workout
   onClose: () => void;
 }) {
   const { exercise, session } = props;
@@ -22,7 +24,10 @@ export default function SetSheet(props: {
     [session.id, exercise.id],
   ) ?? [];
 
-  const past = history.filter((h) => h.session.id !== session.id);
+  // "Last time" = the most recent workout BEFORE this one (matters when editing an old workout).
+  const past = history.filter(
+    (h) => h.session.date < session.date || (h.session.date === session.date && h.session.startedAt < session.startedAt),
+  );
   const last = past[past.length - 1];
   const pb = personalBest(past.flatMap((h) => h.sets));
 
@@ -37,6 +42,12 @@ export default function SetSheet(props: {
     // Renumber the remaining sets 1, 2, 3…
     const rest = sets.filter((s) => s.id !== id);
     await Promise.all(rest.map((s, i) => db.sets.update(s.id, { setNumber: i + 1 })));
+  }
+
+  async function removeFromWorkout() {
+    if (!confirm(`Remove ${exercise.name} from this workout (${formatDay(session.date)})? Its sets will be deleted.`)) return;
+    await removeExerciseFromSession(session.id, exercise.id);
+    props.onClose();
   }
 
   return (
@@ -57,8 +68,7 @@ export default function SetSheet(props: {
         </div>
       </div>
 
-      <div className="spacer" />
-      <RestTimer />
+      {props.showTimer !== false && (<><div className="spacer" /><RestTimer /></>)}
 
       {sets.map((s) => (
         <div key={s.id} className="set-row">
@@ -78,6 +88,12 @@ export default function SetSheet(props: {
         <Link to={`/exercise/${exercise.id}`} className="btn">📈 Progress</Link>
         <button className="btn" onClick={props.onClose}>Done</button>
       </div>
+      {sets.length > 0 && (
+        <>
+          <div className="spacer" />
+          <button className="btn danger" onClick={removeFromWorkout}>Remove from this workout</button>
+        </>
+      )}
     </Sheet>
   );
 }

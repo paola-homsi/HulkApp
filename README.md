@@ -25,12 +25,14 @@ src/
     db.ts            Database schema (Dexie). Tables + indexed fields.
     seed.ts          Built-in foods, muscle groups and exercises (loaded on first launch).
     queries.ts       Reusable data hooks: useSettings, useExercises, useExerciseHistory…
+    migrations.ts    One-time data upgrades (Dexie .upgrade), e.g. v2 restores original exercise names.
   lib/               Logic, no UI. Read these to understand the rules.
     protein.ts       Daily target, protein per entry, "close the gap" suggestions.
     strength.ts      Estimated 1RM, personal best, chart points, set prefill.
     library.ts       6–9 exercise rule, reorder, add, delete/archive.
     dates.ts         Day strings, week start (Monday), "3 days ago".
     backup.ts        Export / import JSON.
+    workouts.ts      Remove an exercise from a workout, delete a workout.
     lib.test.ts      Unit tests for the above.
   components/        Shared UI: Stepper (− value +), ProgressBar, Sheet (bottom panel), Toast.
   features/          One folder per screen.
@@ -38,8 +40,10 @@ src/
     foods/           Food list + food editor.
     library/         Muscle groups + group editor.
     workout/         Start / session checklist, set logging, rest timer, "Not yet done".
+    history/         All workouts by date; tap an exercise to edit or remove it.
+    progress/        Progress per muscle group: first → latest for each exercise, sparklines.
     exercise/        Exercise detail with chart.
-    settings/        Weight, target, step, theme, backup.
+    settings/        Weight, target, step, theme, backup, and the "More" menu.
   App.tsx            Routes + bottom tab bar + theme.
   main.tsx           Entry point. Registers the service worker (offline).
   styles.css         All styling. Colors are CSS variables at the top (dark + light).
@@ -63,7 +67,8 @@ src/
 | Change the rest timer length | `REST_SECONDS` in `features/workout/RestTimer.tsx` |
 | Change the 6–9 exercise rule | `MIN_EXERCISES` / `MAX_EXERCISES` in `lib/library.ts` |
 | Change the default foods/exercises | `db/seed.ts` (only applies to a fresh install) |
-| Add a field to a table | `types.ts`, then add `this.version(2).stores({...})` in `db/db.ts` |
+| Add a field to a table | `types.ts`, then add `this.version(3).stores({...})` in `db/db.ts` (see how version 2 was added) |
+| Fix existing data once | add an `.upgrade(...)` function to a new version, like `db/migrations.ts` |
 
 ## Deploy (GitHub Pages, free)
 
