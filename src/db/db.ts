@@ -3,7 +3,7 @@ import type {
   Exercise, Food, FoodEntry, MuscleGroup, Settings, WorkoutSession, WorkoutSet,
 } from '../types';
 import { seedDatabase } from './seed';
-import { loadMyHistory, v2RestoreOriginalNames, v3LoadMyHistory } from './migrations';
+import { loadMyHistory, v2RestoreOriginalNames, v3LoadMyHistory, v4AbducteurInLegs } from './migrations';
 
 // Dexie wraps IndexedDB. Each property below is one table ("object store").
 export class TrackerDB extends Dexie {
@@ -56,6 +56,19 @@ export class TrackerDB extends Dexie {
         sets: 'id, sessionId, exerciseId',
       })
       .upgrade(v3LoadMyHistory);
+
+    // Version 4: move Abducteur from Glutes to Legs (see migrations.ts).
+    this.version(4)
+      .stores({
+        settings: 'id',
+        foods: 'id, name',
+        foodEntries: 'id, date, foodId',
+        muscleGroups: 'id, order',
+        exercises: 'id, muscleGroupId, order',
+        sessions: 'id, date, muscleGroupId, startedAt',
+        sets: 'id, sessionId, exerciseId',
+      })
+      .upgrade(v4AbducteurInLegs);
 
     // Runs once, the first time the database is created on this device:
     // starter foods + settings, then your own exercises and history.

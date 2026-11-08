@@ -77,3 +77,39 @@ export async function v3LoadMyHistory(tx: Transaction) {
   }
   await loadMyHistory(tx);
 }
+
+// ---------------------------------------------------------------------------
+// Version 4: Abducteur belongs to Legs (it was filed under Glutes). Moves the exercise and its
+// sets into that day's Legs workout. Adducteur and Abducteur stay two separate exercises.
+// ---------------------------------------------------------------------------
+export async function v4AbducteurInLegs(t: Tables) {
+  const OLD = 'ex-glutes-abducteur';
+  const NEW = 'ex-legs-abducteur';
+  const old: Exercise | undefined = await t.table('exercises').get(OLD);
+  if (!old) return;
+
+  // 1. The exercise: new id in Legs, placed right after Adducteur.
+  const legs: Exercise[] = (await t.table('exercises').where('muscleGroupId').equals('mg-legs').toArray())
+    .filter((e: Exercise) => !e.archived)
+    .sort((a: Exercise, b: Exercise) => a.order - b.order);
+  const moved: Exercise = { ...old, id: NEW, muscleGroupId: 'mg-legs' };
+  const at = legs.findIndex((e) => e.name === 'Adducteur');
+  legs.splice(at >= 0 ? at + 1 : legs.length, 0, moved);
+  await t.table('exercises').delete(OLD);
+  await t.table('exercises').bulkPut(legs.map((e, i) => ({ ...e, order: i })));
+
+  // 2. Its sets: move each one to the Legs workout of the same day (create one if missing).
+  const sets: WorkoutSet[] = await t.table('sets').where('exerciseId').equals(OLD).toArray();
+  for (const set of sets) {
+    const from: WorkoutSession = await t.table('sessions').get(set.sessionId);
+    const sameDay: WorkoutSession[] = await t.table('sessions').where('date').equals(from.date).toArray();
+    let target = sameDay.find((s) => s.muscleGroupId === 'mg-legs');
+    if (!target) {
+      target = { ...from, id: `${from.id}-legs`, muscleGroupId: 'mg-legs' };
+      await t.table('sessions').put(target);
+    }
+    await t.table('sets').update(set.id, { exerciseId: NEW, sessionId: target.id });
+    // A Glutes workout left empty (e.g. 6/11, Abducteur only) is removed.
+    if ((await t.table('sets').where('sessionId').equals(from.id).count()) === 0) await t.table('sessions').delete(from.id);
+  }
+}
