@@ -10,6 +10,7 @@ export interface Profile {
   name: string;
   dbName: string; // IndexedDB database holding this user's data
   createdAt: number;
+  photo?: string; // small JPEG as a data: URL, chosen from the phone (stays on this device)
 }
 
 const PROFILES_KEY = 'fittrack.profiles';
@@ -61,6 +62,10 @@ export function addProfile(name: string): Profile {
 
 export function renameProfile(id: string, name: string) {
   saveProfiles(listProfiles().map((p) => (p.id === id ? { ...p, name: name.trim() } : p)));
+}
+
+export function setProfilePhoto(id: string, photo: string | undefined) {
+  saveProfiles(listProfiles().map((p) => (p.id === id ? { ...p, photo } : p)));
 }
 
 /** Delete a user AND their whole database. */

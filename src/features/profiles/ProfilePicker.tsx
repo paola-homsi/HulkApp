@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { TrackerDB } from '../../db/db';
 import { DEFAULT_SETTINGS } from '../../db/seed';
 import { addProfile, listProfiles, switchTo } from '../../db/profiles';
+import Avatar from '../../components/Avatar';
 
 export default function ProfilePicker() {
   const profiles = listProfiles();
@@ -31,7 +32,7 @@ export default function ProfilePicker() {
       <div className="list">
         {profiles.map((p) => (
           <button key={p.id} className="row" onClick={() => switchTo(p.id)} style={{ minHeight: 68 }}>
-            <span className="avatar">{p.name.charAt(0).toUpperCase()}</span>
+            <Avatar profile={p} size={48} />
             <div className="row-main"><div className="row-title" style={{ fontSize: '1.15rem' }}>{p.name}</div></div>
             <span className="muted">›</span>
           </button>

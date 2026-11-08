@@ -239,3 +239,10 @@ a { color: var(--accent); }
   width: 40px; height: 40px; flex: none; border-radius: 50%; display: grid; place-items: center;
   background: var(--accent); color: var(--accent-text); font-weight: 800; font-size: 1.1rem;
 }
+img.avatar { object-fit: cover; background: var(--surface-2); }
+.avatar-btn { position: relative; padding: 0; border: none; background: none; cursor: pointer; flex: none; border-radius: 50%; }
+.avatar-edit {
+  position: absolute; right: -2px; bottom: -2px; width: 24px; height: 24px; border-radius: 50%;
+  display: grid; place-items: center; font-size: 0.8rem;
+  background: var(--surface); border: 1px solid var(--border); color: var(--text);
+}

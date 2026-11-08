@@ -1,6 +1,7 @@
 // "More" tab: the screens you use less often.
 import { Link } from 'react-router-dom';
-import { currentProfile, switchTo } from '../../db/profiles';
+import { currentProfile, setProfilePhoto, switchTo } from '../../db/profiles';
+import Avatar from '../../components/Avatar';
 
 const ITEMS = [
   { to: '/library', title: 'Exercise library', sub: 'Muscle groups and exercises: add, rename, reorder' },
@@ -9,14 +10,18 @@ const ITEMS = [
 ];
 
 export default function MoreScreen() {
+  const profile = currentProfile()!;
   return (
     <>
       <h1>More</h1>
       <div className="row" style={{ cursor: 'default', marginBottom: 16 }}>
-        <span className="avatar">{currentProfile()?.name.charAt(0).toUpperCase()}</span>
+        <Avatar profile={profile} size={56} editable />
         <div className="row-main">
-          <div className="row-title">{currentProfile()?.name}</div>
-          <div className="row-sub">Current user</div>
+          <div className="row-title">{profile.name}</div>
+          <div className="row-sub">
+            Tap the picture to change it
+            {profile.photo && (<> · <button className="link-btn" style={{ padding: 0 }} onClick={() => { setProfilePhoto(profile.id, undefined); location.reload(); }}>remove</button></>)}
+          </div>
         </div>
         <button className="btn small" onClick={() => switchTo(null)}>Switch user</button>
       </div>
